@@ -3,12 +3,14 @@ from tkinter import ttk
 import queue
 import logging
 import clients.public as pub
+import pprint
 
 
 class TickerGui:
-    def __init__(self, master, msg_queue, shelf, start_ch):
+    def __init__(self, master, msg_queue, hist_queue, shelf, start_ch):
         self.master = master
         self.msg_queue = msg_queue
+        self.hist_queue = hist_queue
         self.shelf = shelf
         self.start_ch = start_ch
 
@@ -16,6 +18,7 @@ class TickerGui:
         self.frm_quote = None
         self.frm_base = None
         self.frm_product = None
+        self.frm_hist = None
 
         self.frm_price = None
         self.frm_ohl = None
@@ -27,6 +30,7 @@ class TickerGui:
 
         self.qc_var = tk.IntVar()
         self.bc_var = tk.StringVar()
+        self.hist_var = tk.StringVar()
 
         # Dicts
         self.cur_dict = {}
@@ -42,6 +46,7 @@ class TickerGui:
         self.init_frm_quote()
         self.init_frm_base()
         self.init_frm_product()
+        self.init_frm_hist()
         # Initialize currency and product dictionaries
         self.cur_dict = self.init_currency()
         self.prod_dict = self.init_products()
@@ -166,6 +171,16 @@ class TickerGui:
         else:
             self.shelf['prod_dict'] = self.prod_dict
             self.shelf.sync()
+
+    def process_hist_msg(self):
+        while self.hist_queue.qsize():
+            try:
+                msg = self.hist_queue.get(0)
+                pprint.pprint(msg)
+                self.hist_var.set(msg)
+            except queue.Empty:
+                pass
+        pass
 
     def set_quote_increment(self, msg, item):
         pd = self.prod_dict[msg['product_id']]
@@ -293,7 +308,8 @@ class TickerGui:
         self.frm_product.grid(row=0, column=1, rowspan=2, sticky='news')
 
     def init_frm_price(self):
-        self.frm_price = ttk.Frame(self.frm_product, relief=tk.GROOVE, borderwidth=5)
+        self.frm_price = ttk.Frame(self.frm_product, relief=tk.GROOVE, borderwidth=5, width=20)
+        self.frm_price.propagate(0)
         self.frm_price.columnconfigure(0, weight=1)
         self.frm_price.columnconfigure(1, weight=1)
         self.frm_price.rowconfigure(0, weight=1)
@@ -325,6 +341,17 @@ class TickerGui:
         self.frm_last.rowconfigure(0, weight=1)
         self.frm_last.rowconfigure(1, weight=1)
         self.frm_last.grid(row=1, column=0, sticky='news')
+
+    # Init History Frame
+    def init_frm_hist(self):
+        self.frm_hist = ttk.Frame(self.master, relief=tk.GROOVE, borderwidth=5)
+        self.frm_hist.columnconfigure(0, weight=1)
+        self.frm_hist.rowconfigure(0, weight=1)
+        self.frm_hist.grid(row=2, column=0, columnspan=2, sticky='ew')
+        lbl_hist = ttk.Label(self.frm_hist, text='History')
+        lbl_hist.grid(row=0, column=0)
+        lbl_hist_content = ttk.Label(self.frm_hist, textvariable=self.hist_var)
+        lbl_hist_content.grid(row=1, column=0)
 
     # Gen frame content
     def gen_quote_frm(self):
